@@ -1,0 +1,84 @@
+server:
+  port: ${SERVER_PORT:8081}
+  shutdown: graceful
+  error:
+    whitelabel:
+      enabled: false
+
+spring:
+  application:
+    name: auth-service
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/auth_db}
+    username: ${DB_USER:auth_svc}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+  rabbitmq:
+    addresses: ${AMQP_URL:amqp://guest:guest@localhost:5672}
+    publisher-confirm-type: simple
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 10
+        missing-queues-fatal: false
+        default-requeue-rejected: false
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+management:
+  endpoints:
+    web:
+      base-path: /
+      exposure:
+        include: prometheus
+      path-mapping:
+        prometheus: metrics
+  metrics:
+    tags:
+      service: auth-service
+
+logging:
+  structured:
+    format:
+      console: logstash
+  level:
+    root: ${LOG_LEVEL:info}
+
+festa:
+  jwt:
+    issuer: ${JWT_ISSUER:festa-auth}
+    private-key-path: ${JWT_PRIVATE_KEY_PATH:../festa-infra/secrets/jwt_private.pem}
+    public-key-path: ${JWT_PUBLIC_KEY_PATH:../festa-infra/secrets/jwt_public.pem}
+    access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:15}
+    refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:30}
+  pii:
+    key: ${PII_ENCRYPTION_KEY:}
+  google:
+    client-ids: ${GOOGLE_CLIENT_IDS:}
+  allowed-email-domain: ${ALLOWED_EMAIL_DOMAIN:}
+  login:
+    max-failed-attempts: 5
+    lock-minutes: 15
+  admin:
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
+  messaging:
+    exchange: festa.auth
+    inbox: auth-service.inbox
+    max-retries: 3
