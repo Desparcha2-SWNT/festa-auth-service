@@ -23,6 +23,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
@@ -40,7 +41,12 @@ class TokenServiceTest {
     @Test
     void accessTokenTraeLosClaimsAcordados() {
         String token = service.accessToken(account, "ana@escuelaing.edu.co");
-        Jwt jwt = NimbusJwtDecoder.withPublicKey(keys.publicKey()).build().decode(token);
+        // El validador usa el mismo reloj fijo que el servicio; con el reloj real el token ya estaría vencido.
+        JwtTimestampValidator timestamps = new JwtTimestampValidator();
+        timestamps.setClock(Clock.fixed(now, ZoneOffset.UTC));
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(keys.publicKey()).build();
+        decoder.setJwtValidator(timestamps);
+        Jwt jwt = decoder.decode(token);
 
         assertThat(jwt.getSubject()).isEqualTo(account.getId().toString());
         assertThat(jwt.getClaimAsString("email")).isEqualTo("ana@escuelaing.edu.co");

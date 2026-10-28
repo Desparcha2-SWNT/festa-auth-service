@@ -1,0 +1,73 @@
+# CI de festa-auth-service (SCRUM-44).
+# 1) Escaneo de secretos y vulnerabilidades: workflow reutilizable de la organización.
+# 2) Linter (Checkstyle) y pruebas (JUnit) con Maven; los resultados quedan visibles en el PR.
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  seguridad:
+    uses: Desparcha2-SWNT/.github/.github/workflows/ci-reusable.yml@main
+    # El workflow llamado no puede pedir más permisos que este job. Su job de CodeQL declara
+    # security-events: write y GitHub lo valida al arrancar aunque CodeQL esté desactivado.
+    permissions:
+      contents: read
+      security-events: write
+
+  java:
+    name: Linter, build y pruebas (Java 17)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    env:
+      FESTA_INFRA_TOKEN: ${{ secrets.FESTA_INFRA_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # festa-infra es privado: el GITHUB_TOKEN no lo puede leer. Con el secreto FESTA_INFRA_TOKEN
+      # (token de solo lectura) se descargan los contratos y corre ContractTest; sin él, se omite.
+      - name: Descargar contratos de festa-infra
+        if: env.FESTA_INFRA_TOKEN != ''
+        uses: actions/checkout@v4
+        with:
+          repository: Desparcha2-SWNT/festa-infra
+          ref: develop
+          token: ${{ env.FESTA_INFRA_TOKEN }}
+          path: .festa-infra
+          sparse-checkout: contracts
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Linter, build y pruebas
+        run: |
+          if [ -d .festa-infra/contracts/events ]; then
+            mvn -B verify -Dfesta.contracts.dir="$GITHUB_WORKSPACE/.festa-infra/contracts"
+          else
+            echo "::warning::Sin FESTA_INFRA_TOKEN: se omite la prueba de contratos (ContractTest)."
+            mvn -B verify
+          fi
+
+      - name: Publicar resultados de pruebas en el PR
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: target/surefire-reports/TEST-*.xml
+          check_name: Pruebas JUnit
+          detailed_summary: true
+          include_passed: true
