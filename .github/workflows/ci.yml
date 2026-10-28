@@ -19,6 +19,11 @@ concurrency:
 jobs:
   seguridad:
     uses: Desparcha2-SWNT/.github/.github/workflows/ci-reusable.yml@main
+    # El workflow llamado no puede pedir más permisos que este job. Su job de CodeQL declara
+    # security-events: write y GitHub lo valida al arrancar aunque CodeQL esté desactivado.
+    permissions:
+      contents: read
+      security-events: write
 
   java:
     name: Linter, build y pruebas (Java 17)
