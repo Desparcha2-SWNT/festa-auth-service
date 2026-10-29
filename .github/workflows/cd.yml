@@ -35,11 +35,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # TODO: cambiar a ref: main cuando festa-infra cierre su primer sprint con un PR
+      # develop → main (hoy main solo tiene el README, igual que pasaba aquí antes del PR #1).
       - name: Descargar contratos de festa-infra
         uses: actions/checkout@v4
         with:
           repository: Desparcha2-SWNT/festa-infra
-          ref: main
+          ref: develop
           path: .festa-infra
           sparse-checkout: contracts
 
