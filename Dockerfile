@@ -4,7 +4,7 @@
 
 FROM maven:3.9.9-eclipse-temurin-17 AS build
 WORKDIR /build
-COPY pom.xml .
+COPY pom.xml checkstyle.xml ./
 RUN --mount=type=cache,target=/root/.m2 mvn -B -q dependency:go-offline
 COPY src ./src
 COPY --from=contracts . /contracts
