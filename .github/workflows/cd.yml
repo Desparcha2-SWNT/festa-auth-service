@@ -17,6 +17,8 @@ on:
     paths:
       - Dockerfile
       - pom.xml
+      - checkstyle.xml
+      - src/**
       - .github/workflows/cd.yml
   workflow_dispatch:
 
