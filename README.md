@@ -9,9 +9,9 @@ El gateway expone estos endpoints bajo `/api/auth/...`.
 
 | Método | Ruta | Auth | Qué hace |
 |---|---|---|---|
-| POST | `/auth/register` | — | `{email, password, displayName, accountType: user\|merchant}` → 201 + tokens |
+| POST | `/auth/register` | — | `{email, password, displayName, accountType: user\|merchant, acceptedPrivacyPolicy: true}` → 201 + tokens. Sin `acceptedPrivacyPolicy: true` responde 400 (Ley 1581) |
 | POST | `/auth/login` | — | `{email, password}` → tokens |
-| POST | `/auth/google` | — | `{idToken, accountType?}` → tokens. Crea la cuenta si no existe (`newAccount: true`) o la vincula si ya existía con ese correo |
+| POST | `/auth/google` | — | `{idToken, accountType?, acceptedPrivacyPolicy?}` → tokens. Crea la cuenta si no existe (`newAccount: true`) o la vincula si ya existía con ese correo. Para una cuenta nueva exige `acceptedPrivacyPolicy: true`; si falta responde 400 `PRIVACY_POLICY_NOT_ACCEPTED` y la app debe mostrar el aviso y reintentar |
 | POST | `/auth/refresh` | — | `{refreshToken}` → tokens nuevos. El refresh **rota** en cada uso |
 | POST | `/auth/logout` | — | `{refreshToken}` → 204. Revoca la sesión |
 | GET | `/auth/me` | JWT | Datos de la cuenta |

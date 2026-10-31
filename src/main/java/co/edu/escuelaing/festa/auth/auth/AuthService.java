@@ -79,6 +79,7 @@ public class AuthService {
         Role role = Role.fromValue(req.accountType());
         Account account = new Account(UUID.randomUUID(), emailHash, crypto.encrypt(email), crypto.encrypt(req.displayName().trim()), role);
         account.setPasswordHash(passwords.encode(req.password()));
+        account.recordPrivacyConsent(clock.instant(), PrivacyPolicy.CURRENT_VERSION);
         account.registerSuccessfulLogin(clock.instant());
         saveNew(account);
         publishRegistered(account, email, req.displayName().trim(), "password");
@@ -118,7 +119,7 @@ public class AuthService {
     }
 
     @Transactional(noRollbackFor = ApiException.class)
-    public AuthResponse loginWithGoogle(String idToken, String accountType) {
+    public AuthResponse loginWithGoogle(String idToken, String accountType, Boolean acceptedPrivacyPolicy) {
         GoogleIdentity identity = google.verify(idToken);
         if (!identity.emailVerified() || identity.email() == null) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "GOOGLE_EMAIL_NOT_VERIFIED", "Tu correo de Google no está verificado.");
@@ -133,10 +134,16 @@ public class AuthService {
 
         boolean isNew = account == null;
         if (isNew) {
+            // Una cuenta nueva solo se crea con la autorización expresa del titular (Ley 1581).
+            if (!Boolean.TRUE.equals(acceptedPrivacyPolicy)) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "PRIVACY_POLICY_NOT_ACCEPTED",
+                        "Debes autorizar el tratamiento de tus datos personales para registrarte.");
+            }
             String name = identity.name() == null || identity.name().isBlank() ? email.substring(0, email.indexOf('@')) : identity.name();
             Role role = accountType == null ? Role.USER : Role.fromValue(accountType);
             account = new Account(UUID.randomUUID(), crypto.blindIndex(email), crypto.encrypt(email), crypto.encrypt(name), role);
             account.setGoogleSub(identity.subject());
+            account.recordPrivacyConsent(now, PrivacyPolicy.CURRENT_VERSION);
             saveNew(account);
             publishRegistered(account, email, name, "google");
         } else if (account.getGoogleSub() == null) {
