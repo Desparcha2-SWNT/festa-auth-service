@@ -56,7 +56,7 @@ class AuthServiceTest {
 
     @Test
     void registroCifraDatosYPublicaAccountRegistered() {
-        var res = service.register(new RegisterRequest("Ana@EscuelaIng.edu.co", "clave1234", "Ana Pérez", "merchant"));
+        var res = service.register(new RegisterRequest("Ana@EscuelaIng.edu.co", "clave1234", "Ana Pérez", "merchant", true));
 
         ArgumentCaptor<Account> saved = ArgumentCaptor.forClass(Account.class);
         verify(accounts).saveAndFlush(saved.capture());
@@ -74,8 +74,18 @@ class AuthServiceTest {
     }
 
     @Test
+    void registroGuardaLaAutorizacionDeDatosConSuVersion() {
+        service.register(new RegisterRequest("ana@escuelaing.edu.co", "clave1234", "Ana", "user", true));
+
+        ArgumentCaptor<Account> saved = ArgumentCaptor.forClass(Account.class);
+        verify(accounts).saveAndFlush(saved.capture());
+        assertThat(saved.getValue().getPrivacyAcceptedAt()).isEqualTo(now);
+        assertThat(saved.getValue().getPrivacyPolicyVersion()).isEqualTo(PrivacyPolicy.CURRENT_VERSION);
+    }
+
+    @Test
     void registroRechazaOtrosDominios() {
-        assertThatThrownBy(() -> service.register(new RegisterRequest("ana@gmail.com", "clave1234", "Ana", "user")))
+        assertThatThrownBy(() -> service.register(new RegisterRequest("ana@gmail.com", "clave1234", "Ana", "user", true)))
                 .extracting("code").isEqualTo("EMAIL_DOMAIN_NOT_ALLOWED");
         verify(accounts, never()).saveAndFlush(any());
     }
@@ -83,7 +93,7 @@ class AuthServiceTest {
     @Test
     void registroRechazaCorreoRepetido() {
         when(accounts.existsByEmailHash(any())).thenReturn(true);
-        assertThatThrownBy(() -> service.register(new RegisterRequest("ana@escuelaing.edu.co", "clave1234", "Ana", "user")))
+        assertThatThrownBy(() -> service.register(new RegisterRequest("ana@escuelaing.edu.co", "clave1234", "Ana", "user", true)))
                 .extracting("code").isEqualTo("EMAIL_TAKEN");
     }
 
@@ -135,7 +145,7 @@ class AuthServiceTest {
         when(accounts.findByGoogleSub("g-1")).thenReturn(Optional.empty());
         when(accounts.findByEmailHash(any())).thenReturn(Optional.empty());
 
-        var res = service.loginWithGoogle("tok", "merchant");
+        var res = service.loginWithGoogle("tok", "merchant", true);
 
         assertThat(res.newAccount()).isTrue();
         assertThat(res.account().role()).isEqualTo(Role.MERCHANT);
@@ -144,9 +154,47 @@ class AuthServiceTest {
     }
 
     @Test
+    void googleGuardaLaAutorizacionAlCrearLaCuenta() {
+        when(google.verify("tok")).thenReturn(new GoogleTokenVerifier.GoogleIdentity("g-1", "luis@escuelaing.edu.co", true, "Luis"));
+        when(accounts.findByGoogleSub("g-1")).thenReturn(Optional.empty());
+        when(accounts.findByEmailHash(any())).thenReturn(Optional.empty());
+
+        service.loginWithGoogle("tok", null, true);
+
+        ArgumentCaptor<Account> saved = ArgumentCaptor.forClass(Account.class);
+        verify(accounts).saveAndFlush(saved.capture());
+        assertThat(saved.getValue().getPrivacyAcceptedAt()).isEqualTo(now);
+        assertThat(saved.getValue().getPrivacyPolicyVersion()).isEqualTo(PrivacyPolicy.CURRENT_VERSION);
+    }
+
+    @Test
+    void googleNoCreaCuentaNuevaSinAutorizacion() {
+        when(google.verify("tok")).thenReturn(new GoogleTokenVerifier.GoogleIdentity("g-1", "luis@escuelaing.edu.co", true, "Luis"));
+        when(accounts.findByGoogleSub("g-1")).thenReturn(Optional.empty());
+        when(accounts.findByEmailHash(any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.loginWithGoogle("tok", null, false)).extracting("code").isEqualTo("PRIVACY_POLICY_NOT_ACCEPTED");
+        assertThatThrownBy(() -> service.loginWithGoogle("tok", null, null)).extracting("code").isEqualTo("PRIVACY_POLICY_NOT_ACCEPTED");
+        verify(accounts, never()).saveAndFlush(any());
+        verify(events, never()).publish(eq(AuthEvents.ACCOUNT_REGISTERED), any());
+    }
+
+    @Test
+    void googleConCuentaExistenteEntraSinPedirAutorizacionDeNuevo() {
+        var account = existing("luis@escuelaing.edu.co", "clave1234");
+        account.setGoogleSub("g-1");
+        when(google.verify("tok")).thenReturn(new GoogleTokenVerifier.GoogleIdentity("g-1", "luis@escuelaing.edu.co", true, "Luis"));
+        when(accounts.findByGoogleSub("g-1")).thenReturn(Optional.of(account));
+
+        var res = service.loginWithGoogle("tok", null, null);
+
+        assertThat(res.newAccount()).isFalse();
+    }
+
+    @Test
     void googleExigeCorreoVerificado() {
         when(google.verify("tok")).thenReturn(new GoogleTokenVerifier.GoogleIdentity("g-1", "luis@escuelaing.edu.co", false, "Luis"));
-        assertThatThrownBy(() -> service.loginWithGoogle("tok", null)).extracting("code").isEqualTo("GOOGLE_EMAIL_NOT_VERIFIED");
+        assertThatThrownBy(() -> service.loginWithGoogle("tok", null, null)).extracting("code").isEqualTo("GOOGLE_EMAIL_NOT_VERIFIED");
     }
 
     @Test

@@ -47,7 +47,7 @@ public class AuthController {
 
     @PostMapping("/google")
     public AuthResponse google(@Valid @RequestBody GoogleLoginRequest req) {
-        return auth.loginWithGoogle(req.idToken(), req.accountType());
+        return auth.loginWithGoogle(req.idToken(), req.accountType(), req.acceptedPrivacyPolicy());
     }
 
     @PostMapping("/refresh")

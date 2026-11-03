@@ -58,6 +58,12 @@ public class Account {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "privacy_accepted_at")
+    private Instant privacyAcceptedAt;
+
+    @Column(name = "privacy_policy_version")
+    private String privacyPolicyVersion;
+
     protected Account() {}
 
     public Account(UUID id, byte[] emailHash, String emailEnc, String displayNameEnc, Role role) {
@@ -66,6 +72,12 @@ public class Account {
         this.emailEnc = emailEnc;
         this.displayNameEnc = displayNameEnc;
         this.role = role;
+    }
+
+    /** Deja constancia de que el titular autorizó el tratamiento de sus datos (Ley 1581). */
+    public void recordPrivacyConsent(Instant now, String policyVersion) {
+        privacyAcceptedAt = now;
+        privacyPolicyVersion = policyVersion;
     }
 
     @PreUpdate
@@ -137,4 +149,6 @@ public class Account {
     public Instant getSuspendedUntil() { return suspendedUntil; }
     public Instant getLockedUntil() { return lockedUntil; }
     public Instant getCreatedAt() { return createdAt; }
+    public Instant getPrivacyAcceptedAt() { return privacyAcceptedAt; }
+    public String getPrivacyPolicyVersion() { return privacyPolicyVersion; }
 }
