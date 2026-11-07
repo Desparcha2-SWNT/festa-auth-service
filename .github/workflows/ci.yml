@@ -1,0 +1,69 @@
+# CI de festa-auth-service (SCRUM-44).
+# 1) Escaneo de secretos y vulnerabilidades: workflow reutilizable de la organización.
+# 2) Análisis estático del código con CodeQL (Java).
+# 3) Linter (Checkstyle) y pruebas (JUnit) con Maven; los resultados quedan visibles en el PR.
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  seguridad:
+    uses: Desparcha2-SWNT/.github/.github/workflows/ci-reusable.yml@main
+    # El workflow llamado no puede pedir más permisos que este job. Su job de CodeQL declara
+    # security-events: write y GitHub lo valida al arrancar aunque CodeQL esté desactivado.
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      # Este repo compila y prueba en su propio job; el build del CI reutilizable se omite (no queda en verde, queda "skipped").
+      stack: none
+      # Análisis estático del código propio (SAST). Gratis porque el repositorio es público.
+      enable-codeql: true
+      codeql-language: java-kotlin
+
+  java:
+    name: Linter, build y pruebas (Java 17)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Contratos de mensajería (festa-infra es público, no hace falta token) para ContractTest.
+      - name: Descargar contratos de festa-infra
+        uses: actions/checkout@v4
+        with:
+          repository: Desparcha2-SWNT/festa-infra
+          ref: develop
+          path: .festa-infra
+          sparse-checkout: contracts
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Linter, build y pruebas
+        run: mvn -B verify -Dfesta.contracts.dir="$GITHUB_WORKSPACE/.festa-infra/contracts"
+
+      - name: Publicar resultados de pruebas en el PR
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: target/surefire-reports/TEST-*.xml
+          check_name: Pruebas JUnit
+          detailed_summary: true
+          include_passed: true
