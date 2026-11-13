@@ -7,10 +7,15 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.DynamicUpdate;
 
 /** Cuenta de Festa. Email y nombre se guardan cifrados; ver {@link co.edu.escuelaing.festa.auth.crypto.PiiCrypto}. */
 @Entity
 @Table(name = "accounts")
+// Solo se escriben las columnas que cambiaron. Sin esto, un login (que mantiene la transacción abierta
+// mientras verifica la contraseña) reescribía la fila completa con el `status` que leyó al empezar y
+// deshacía una suspensión (moderation.user_suspended) que se guardó en medio: la cuenta quedaba activa.
+@DynamicUpdate
 public class Account {
 
     @Id
