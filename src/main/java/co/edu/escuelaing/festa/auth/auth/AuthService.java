@@ -263,8 +263,11 @@ public class AuthService {
     }
 
     private void publishRegistered(Account account, String email, String name, String provider) {
+        Instant now = clock.instant();
         events.publish(AuthEvents.ACCOUNT_REGISTERED,
-                new AuthEvents.AccountRegistered(account.getId(), email, name, provider, account.getRole(), clock.instant()));
+                new AuthEvents.AccountRegistered(account.getId(), email, name, provider, account.getRole(), now));
+        // Versión mínima para booking (lista de asistentes): sin correo ni rol (Ley 1581, minimización).
+        events.publish(AuthEvents.ACCOUNT_DISPLAY_NAME_SET, new AuthEvents.AccountDisplayNameSet(account.getId(), name, now));
     }
 
     private Account load(UUID accountId) {
