@@ -10,10 +10,14 @@ public final class AuthEvents {
     private AuthEvents() {}
 
     public static final String ACCOUNT_REGISTERED = "account.registered";
+    public static final String ACCOUNT_DISPLAY_NAME_SET = "account.display_name_set";
     public static final String ACCOUNT_ROLE_CHANGED = "account.role_changed";
     public static final String ACCOUNT_DELETED = "account.deleted";
 
     public record AccountRegistered(UUID userId, String email, String displayName, String provider, Role role, Instant registeredAt) {}
+
+    /** Solo id y nombre, para quien necesita mostrar quién es alguien sin recibir su correo ni su rol. */
+    public record AccountDisplayNameSet(UUID userId, String displayName, Instant setAt) {}
 
     public record AccountRoleChanged(UUID userId, Role previousRole, Role newRole, UUID changedBy, Instant changedAt) {}
 

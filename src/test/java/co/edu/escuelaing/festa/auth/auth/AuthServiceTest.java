@@ -69,6 +69,12 @@ class AuthServiceTest {
         assertThat(registered.email()).isEqualTo("ana@escuelaing.edu.co");
         assertThat(registered.provider()).isEqualTo("password");
 
+        // booking recibe solo id y nombre, con la misma hora del registro.
+        ArgumentCaptor<Object> named = ArgumentCaptor.forClass(Object.class);
+        verify(events).publish(eq(AuthEvents.ACCOUNT_DISPLAY_NAME_SET), named.capture());
+        assertThat(named.getValue()).isEqualTo(new AuthEvents.AccountDisplayNameSet(
+                registered.userId(), "Ana Pérez", registered.registeredAt()));
+
         assertThat(res.account().email()).isEqualTo("ana@escuelaing.edu.co");
         assertThat(res.newAccount()).isTrue();
     }
@@ -151,6 +157,8 @@ class AuthServiceTest {
         assertThat(res.account().role()).isEqualTo(Role.MERCHANT);
         assertThat(res.account().hasGoogle()).isTrue();
         verify(events).publish(eq(AuthEvents.ACCOUNT_REGISTERED), any());
+        verify(events).publish(eq(AuthEvents.ACCOUNT_DISPLAY_NAME_SET),
+                eq(new AuthEvents.AccountDisplayNameSet(res.account().id(), "Luis", now)));
     }
 
     @Test
@@ -177,6 +185,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> service.loginWithGoogle("tok", null, null)).extracting("code").isEqualTo("PRIVACY_POLICY_NOT_ACCEPTED");
         verify(accounts, never()).saveAndFlush(any());
         verify(events, never()).publish(eq(AuthEvents.ACCOUNT_REGISTERED), any());
+        verify(events, never()).publish(eq(AuthEvents.ACCOUNT_DISPLAY_NAME_SET), any());
     }
 
     @Test
