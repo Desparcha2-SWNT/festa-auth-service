@@ -51,6 +51,7 @@ class ContractTest {
         return Stream.of(
                 Arguments.of(AuthEvents.ACCOUNT_REGISTERED,
                         new AuthEvents.AccountRegistered(id, "ana@mail.escuelaing.edu.co", "Ana Pérez", "google", Role.MERCHANT, now)),
+                Arguments.of(AuthEvents.ACCOUNT_DISPLAY_NAME_SET, new AuthEvents.AccountDisplayNameSet(id, "Ana Pérez", now)),
                 Arguments.of(AuthEvents.ACCOUNT_ROLE_CHANGED,
                         new AuthEvents.AccountRoleChanged(id, Role.USER, Role.ADMIN, UUID.randomUUID(), now)),
                 Arguments.of(AuthEvents.ACCOUNT_DELETED, new AuthEvents.AccountDeleted(id, now)));
