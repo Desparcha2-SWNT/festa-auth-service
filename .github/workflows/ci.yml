@@ -59,6 +59,21 @@ jobs:
       - name: Linter, build y pruebas
         run: mvn -B verify -Dfesta.contracts.dir="$GITHUB_WORKSPACE/.festa-infra/contracts"
 
+      - name: Resumen de cobertura (JaCoCo)
+        if: always() && hashFiles('target/site/jacoco/jacoco.csv') != ''
+        run: |
+          awk -F, 'NR > 1 { im += $4; ic += $5; bm += $6; bc += $7; lm += $8; lc += $9; mm += $12; mc += $13 }
+            function pct(c, m) { return (c + m) ? sprintf("%.2f %%", 100 * c / (c + m)) : "sin datos" }
+            END {
+              print "## Cobertura de pruebas (JaCoCo)\n"
+              print "| Métrica | Cobertura | Cubiertas |"
+              print "|---|---|---|"
+              printf "| Líneas | %s | %d de %d |\n", pct(lc, lm), lc, lc + lm
+              printf "| Instrucciones | %s | %d de %d |\n", pct(ic, im), ic, ic + im
+              printf "| Métodos | %s | %d de %d |\n", pct(mc, mm), mc, mc + mm
+              printf "| Ramas | %s | %d de %d |\n", pct(bc, bm), bc, bc + bm
+            }' target/site/jacoco/jacoco.csv >> "$GITHUB_STEP_SUMMARY"
+
       - name: Publicar resultados de pruebas en el PR
         if: always()
         uses: mikepenz/action-junit-report@v5
