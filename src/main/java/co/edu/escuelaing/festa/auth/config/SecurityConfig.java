@@ -28,6 +28,9 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, JsonSecurityHandlers handlers) throws Exception {
+        // CSRF deshabilitado a propósito (java:S4502): la API es stateless, se autentica con JWT en la
+        // cabecera Authorization (Bearer) y no usa cookies de sesión, así que el navegador no envía
+        // credenciales automáticamente y no hay superficie para CSRF.
         http.csrf(c -> c.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
