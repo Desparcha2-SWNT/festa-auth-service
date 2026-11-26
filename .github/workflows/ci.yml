@@ -72,7 +72,7 @@ jobs:
               printf "| Instrucciones | %s | %d de %d |\n", pct(ic, im), ic, ic + im
               printf "| Métodos | %s | %d de %d |\n", pct(mc, mm), mc, mc + mm
               printf "| Ramas | %s | %d de %d |\n", pct(bc, bm), bc, bc + bm
-            }' target/site/jacoco/jacoco.csv >> "$GITHUB_STEP_SUMMARY"
+            }' target/site/jacoco/jacoco.csv | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Publicar resultados de pruebas en el PR
         if: always()
