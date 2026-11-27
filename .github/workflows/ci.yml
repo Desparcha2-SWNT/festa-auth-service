@@ -40,6 +40,8 @@ jobs:
       checks: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # Contratos de mensajería (festa-infra es público, no hace falta token) para ContractTest.
       - name: Descargar contratos de festa-infra
@@ -58,6 +60,34 @@ jobs:
 
       - name: Linter, build y pruebas
         run: mvn -B verify -Dfesta.contracts.dir="$GITHUB_WORKSPACE/.festa-infra/contracts"
+
+      - name: Resumen de cobertura (JaCoCo)
+        if: always() && hashFiles('target/site/jacoco/jacoco.csv') != ''
+        run: |
+          awk -F, 'NR > 1 { im += $4; ic += $5; bm += $6; bc += $7; lm += $8; lc += $9; mm += $12; mc += $13 }
+            function pct(c, m) { return (c + m) ? sprintf("%.2f %%", 100 * c / (c + m)) : "sin datos" }
+            END {
+              print "## Cobertura de pruebas (JaCoCo)\n"
+              print "| Métrica | Cobertura | Cubiertas |"
+              print "|---|---|---|"
+              printf "| Líneas | %s | %d de %d |\n", pct(lc, lm), lc, lc + lm
+              printf "| Instrucciones | %s | %d de %d |\n", pct(ic, im), ic, ic + im
+              printf "| Métodos | %s | %d de %d |\n", pct(mc, mm), mc, mc + mm
+              printf "| Ramas | %s | %d de %d |\n", pct(bc, bm), bc, bc + bm
+            }' target/site/jacoco/jacoco.csv | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Análisis de SonarCloud desde el CI, con la cobertura de JaCoCo (target/site/jacoco/jacoco.xml).
+      # Requiere SONAR_TOKEN (secreto de la organización) y el análisis automático apagado en el proyecto.
+      - name: Análisis de SonarCloud
+        if: always() && hashFiles('target/site/jacoco/jacoco.xml') != ''
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar
+          -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.organization=desparcha2-swnt
+          -Dsonar.projectKey=Desparcha2-SWNT_festa-auth-service
+          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
       - name: Publicar resultados de pruebas en el PR
         if: always()
