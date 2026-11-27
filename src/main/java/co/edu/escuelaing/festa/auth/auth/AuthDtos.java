@@ -14,15 +14,15 @@ public final class AuthDtos {
 
     private AuthDtos() {}
 
-    static final String PASSWORD_RULE = "^(?=.*[A-Za-zÁÉÍÓÚáéíóúÑñ])(?=.*\\d).{8,72}$";
-    static final String PASSWORD_MESSAGE = "La contraseña debe tener entre 8 y 72 caracteres, con al menos una letra y un número.";
+    static final String CLAVE_REGLA = "^(?=.*[A-Za-zÁÉÍÓÚáéíóúÑñ])(?=.*\\d).{8,72}$";
+    static final String CLAVE_MENSAJE = "La contraseña debe tener entre 8 y 72 caracteres, con al menos una letra y un número.";
     static final String ACCOUNT_TYPE_RULE = "^(user|merchant)$";
     static final String PRIVACY_MESSAGE = "Debes autorizar el tratamiento de tus datos personales para registrarte.";
     static final String ACCOUNT_TYPE_MESSAGE = "El tipo de cuenta debe ser 'user' o 'merchant'.";
 
     public record RegisterRequest(
             @NotBlank(message = "El correo es obligatorio.") @Email(message = "El correo no es válido.") @Size(max = 254) String email,
-            @NotBlank(message = "La contraseña es obligatoria.") @Pattern(regexp = PASSWORD_RULE, message = PASSWORD_MESSAGE) String password,
+            @NotBlank(message = "La contraseña es obligatoria.") @Pattern(regexp = CLAVE_REGLA, message = CLAVE_MENSAJE) String password,
             @NotBlank(message = "El nombre es obligatorio.") @Size(min = 2, max = 80, message = "El nombre debe tener entre 2 y 80 caracteres.") String displayName,
             @NotBlank(message = "El tipo de cuenta es obligatorio.") @Pattern(regexp = ACCOUNT_TYPE_RULE, message = ACCOUNT_TYPE_MESSAGE) String accountType,
             @NotNull(message = PRIVACY_MESSAGE) @AssertTrue(message = PRIVACY_MESSAGE) Boolean acceptedPrivacyPolicy) {}
@@ -40,7 +40,7 @@ public final class AuthDtos {
 
     public record ChangePasswordRequest(
             String currentPassword,
-            @NotBlank(message = "La contraseña nueva es obligatoria.") @Pattern(regexp = PASSWORD_RULE, message = PASSWORD_MESSAGE) String newPassword) {}
+            @NotBlank(message = "La contraseña nueva es obligatoria.") @Pattern(regexp = CLAVE_REGLA, message = CLAVE_MENSAJE) String newPassword) {}
 
     public record ChangeRoleRequest(@NotNull(message = "El rol es obligatorio.") Role role) {}
 
